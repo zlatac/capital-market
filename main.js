@@ -1,6 +1,7 @@
-var csv = require('csv');
+const csv = require('csv');
 const fs = require('fs');
 const moment = require('moment');
+//Create a promise function to get all the prices from Price.csv on the server
 getPrices = new Promise (function(resolve,reject){
     var basket = [];
     var dataRead = fs.readFile('data/prices.csv',function(err,data){
@@ -36,6 +37,7 @@ function safe(obj){
     return true;
 };
 
+//Create a promise function to get data out of any csv file on the server
 getFile = function(location){
     return new Promise (function(resolve,reject){
         var basket = [];
