@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Capital Markets</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f42424">
+  <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet">
+  <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.6.4/angular.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js"></script>
+  <!-- Compiled and minified CSS -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-alpha.2/css/materialize.min.css">
+  <!-- Compiled and minified JavaScript -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0-alpha.2/js/materialize.min.js"></script>
+</head>
+<body ng-app="app" ng-controller="bmo" ng-cloak>
+    <div class="container">
+        <div class="row center-align">
+            <h3>Capital Markets</h3>
+            <div>
+                <form action="/form" method="post" enctype="multipart/form-data" style="text-align:-webkit-center;">
+                    <!-- <input type="file" name="boobs" ng-model="boobs"> -->
+                    <div class="file-field input-field" style="width:300px;">
+                        <div class="btn" style="background-color:#0079c1!important">
+                            <span>File</span>
+                            <input type="file" name="boobs" ng-model="boobs">
+                        </div>
+                        <div class="file-path-wrapper">
+                            <input class="file-path validate" type="text">
+                        </div>
+                    </div>
+                    
+                </form>
+                <button class="waves-effect waves-light btn" ng-click="submit()" style="background-color:#0079c1!important;margin-top:10px;">
+                    upload
+                </button>
+                <div class="card-panel" ng-show="displayError" style="margin:10px 33%;">
+                    <span class="red-text">Must be a CSV file (.csv)</span>
+                </div>
+                 <!-- Modal Trigger -->
+                <!-- <a class="waves-effect waves-light btn modal-trigger" data-target="modal1">Modal</a> -->
+                
+                    <!-- Modal Structure -->
+                    <div id="modal1" class="modal" style="width:90%;max-height:85%;">
+                    <div class="modal-content">
+                        <canvas id="lineChart2" width="400" height="400"></canvas>
+                    </div>
+                    <div class="modal-footer">
+                        <a href="#!" class="modal-action modal-close waves-effect waves-green btn-flat">Close</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="progress" ng-show="displayLoader">
+                <div class="indeterminate"></div>
+            </div>
+                      
+        </div>
+        <div class="row">
+            <div class="col l6 s12">
+                <div>
+                    <!-- Etf Table  -->
+                    <div>
+                        <table class="striped" ng-show="displayTable">
+                            <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Weight</th>
+                                <th>Price ({{recent_date}})</th>
+                            </tr>
+                            </thead>
+                    
+                            <tbody>
+                            <tr ng-repeat="x in etf | orderBy:'name'">
+                                <td>{{x.name}}</td>
+                                <td>{{x.weight}}</td>
+                                <td>{{x.price | currency}}</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+            </div>
+            <div class="col l6 s12">
+               <div class="row">
+                   <!-- Series plot -->
+                   <canvas id="lineChart" width="400" height="400" ng-click="lineBig()"></canvas>
+               </div> 
+               <div class="row">
+                   <!-- Bar graph plot -->
+                    <div>
+                        <canvas id="barChart" width="400" height="400"  ng-click="barBig()"></canvas>
+                    </div>  
+               </div>       
+            </div>
+        </div>
+
+    </div>
+    
+    
+</body>
+<script>
+    var app = angular.module('app',[]);
+
+    app.controller('bmo',function($scope,$http){
+        $scope.etf = null;
+        $scope.timePlot = null;
+        $scope.displayTable = false;
+        $scope.displayLoader = false;
+        $scope.displayError = false;
+        var modal = document.querySelector('.modal');
+        $scope.instance = new M.Modal(modal);
+        // $http.get('/baby')
+        // .then(function(data){
+        //     console.log(data);
+        // });
+
+        $scope.submit = function(){
+            console.log('heyyy');
+            var elem = angular.element(document.querySelectorAll('form'));
+            if(elem[0][0].value.includes('.csv')){
+                $scope.displayTable = false;
+                $scope.displayLoader = true;
+                $scope.displayError = false;
+                var ready = new FormData(elem[0]);
+                $http.post('/form',ready,{
+                    transformRequest: angular.identity,
+                    headers: {'Content-Type': undefined}})
+                .then(function(res){
+                    console.log(res);
+                    $scope.etf = res.data.file;
+                    $scope.timePlot = seperate(res.data.etf_price,'DATE','total');
+                    $scope.barPlot = $scope.getBarGraph(res.data.file);
+                    $scope.recent_date = res.data.recent_date;
+                    initiateChart('lineChart','line','Prices',$scope.timePlot);
+                    initiateChart('barChart','horizontalBar','Holding Size ('+$scope.recent_date+')',$scope.barPlot);
+                    $scope.displayLoader = false;
+                    $scope.displayTable = true;
+
+                    console.log($scope.timePlot);
+                });
+            }else{
+                $scope.displayError = true;
+                console.log('this is not a CSV file');
+            }
+            
+        };
+
+        $scope.getBarGraph = function(obj){
+            var basket = [];
+            var output = null;
+            angular.copy(obj,basket);
+            basket.sort(function(a,b){
+                return b.holding - a.holding;
+            });
+            basket =  basket.slice(0,5);
+            output = seperate(basket,'name','holding');
+            console.log('basket',output);
+            return output;
+        }
+
+        function seperate(obj,x,y){
+            //x & y is the string name of the property we want on the X axis and Y axis
+            //obj is an array
+            xx = [];
+            yy = [];
+            obj.forEach(function(item){
+                if(item.hasOwnProperty(x)){
+                    xx.push(item[x]);
+                }
+                if(item.hasOwnProperty(y)){
+                    yy.push(item[y]);
+                }
+            });
+            return {xx,yy};
+        }
+
+        function initiateChart(id,type,label,data){
+            var Elem = angular.element(document.querySelector("#"+id).getContext('2d'));
+            var myChart = new Chart(Elem, {
+                type: type,
+                data: {
+                    labels: data.xx,
+                    datasets: [{
+                        label: label,
+                        data: data.yy,
+                        pointRadius: 0.3,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(54, 162, 235, 0.2)',
+                            'rgba(255, 206, 86, 0.2)',
+                            'rgba(75, 192, 192, 0.2)',
+                            'rgba(153, 102, 255, 0.2)',
+                            'rgba(255, 159, 64, 0.2)'
+                        ],
+                        borderColor: [
+                            'rgba(255,99,132,1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                beginAtZero:true
+                            }
+                        }]
+                    }
+                }
+            });
+        }
+
+        $scope.lineBig = function(){
+            initiateChart('lineChart2','line','Prices',$scope.timePlot);
+            $scope.instance.open();
+        }
+
+        $scope.barBig = function(){
+            initiateChart('lineChart2','bar','Holding Size ('+$scope.recent_date+')',$scope.barPlot);
+            $scope.instance.open();
+        }
+    });
+</script>
+</html>
