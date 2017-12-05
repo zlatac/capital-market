@@ -59,7 +59,10 @@ app.post('/form', function(req,res){
 });
 
 
-app.listen(3000);
+app.set('port', process.env.PORT || 3000);
+app.listen(app.get('port'), function() {
+ console.log('listening to Port', app.get('port'));
+});
 
 //ASSUMPTIONS
 //Only CSV files can be uploaded and must have name,weight columns.
