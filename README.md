@@ -13,7 +13,7 @@ Download the project and Run `npm install`.
 
 Run `npm start` to launch app.
 
-## Asumptions
+## Assumptions
 - Only CSV files can be uploaded and must have name,weight columns.
 - The data in price.csv is not in any order and must be sorted properly by date.
 - Uploaded file isn't stored on the server for any specific purpose.
