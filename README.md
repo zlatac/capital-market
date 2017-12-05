@@ -19,6 +19,9 @@ Run `npm start` to launch app.
 - Uploaded file isn't stored on the server for any specific purpose.
 - App should be optimized for mobile use.
 - Latest Data uploaded persists in the browser even after app is closed.
+- Date format (YYYY-MM-DD) is consistent in the uploaded file.
+- Only 1 file can be uploaded at a time.
+- ETF constituent names in uploaded file are exact and consistent with whats in the real market(API).
 
 ## Challenges
 - I tried adding a zoom functionality to the chart but i would need more time to understand the 3rd party zoom plugin for Chart.js.
